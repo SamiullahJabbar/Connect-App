@@ -1,0 +1,29 @@
+version: "3.8"
+
+services:
+  backend:
+    container_name: backend
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "16832:8000"
+    depends_on:
+      - db
+    environment:
+      - DATABASE_HOST=db
+
+  db:
+    container_name: db
+    image: postgres:15
+    environment:
+      POSTGRES_DB: app_job
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: 123
+    ports:
+      - "5432:5432"
+    volumes:
+      - db_data:/var/lib/postgresql/data
+
+volumes:
+  db_data:

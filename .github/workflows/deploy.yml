@@ -1,0 +1,32 @@
+name: CI/CD Pipeline for deploying to EC2
+
+on:
+  push:
+    branches:
+      - master
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Add SSH key
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
+
+      - name: Deploy to EC2
+        env:
+          EC2_IP: ${{ secrets.EC2_IP }}
+        run: |
+          ssh -o StrictHostKeyChecking=no ubuntu@$EC2_IP << 'EOF'
+          cd ${{ secrets.REPO_FOLDER }}
+          git stash
+          git pull origin master
+          git stash apply
+          docker-compose down
+          docker-compose up --build -d
+          docker system prune -af
+          EOF
