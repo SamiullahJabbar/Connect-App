@@ -1,0 +1,41 @@
+{% extends "admin/base.html" %}
+
+{% block content %}
+<h1>Admin Dashboard</h1>
+<div class="container">
+    <div class="row">
+        <div class="col-md-3">
+            <div class="card bg-info text-white">
+                <div class="card-body">
+                    <h5>Total Jobs</h5>
+                    <h2>{{ total_jobs }}</h2>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-warning text-white">
+                <div class="card-body">
+                    <h5>Total Applications</h5>
+                    <h2>{{ total_applications }}</h2>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-success text-white">
+                <div class="card-body">
+                    <h5>Total Users</h5>
+                    <h2>{{ total_users }}</h2>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-danger text-white">
+                <div class="card-body">
+                    <h5>Unread Notifications</h5>
+                    <h2>{{ total_notifications }}</h2>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
