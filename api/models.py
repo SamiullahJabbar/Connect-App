@@ -50,18 +50,21 @@ class User(AbstractUser):
 
 
 
+def user_profile_image_path(instance, filename):
+    """Generate file path for new user profile image."""
+    return f'profile_images/{instance.user.id}/{filename}'
 
 class UserProfile(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name="profile")
+    profile_image = models.ImageField(upload_to=user_profile_image_path, blank=True, null=True) 
     skills = models.TextField(blank=True, null=True)
-    experience = models.PositiveIntegerField(default=0)  # Years of experience
+    experience = models.PositiveIntegerField(default=0)  
     city = models.CharField(max_length=100, blank=True, null=True)
     education = models.CharField(max_length=255, blank=True, null=True)
     about_me = models.TextField(blank=True, null=True)
 
     def __str__(self):
         return f"{self.user.username}'s Profile"
-
 
 
 

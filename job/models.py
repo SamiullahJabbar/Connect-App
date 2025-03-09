@@ -5,8 +5,9 @@ User = get_user_model()
 
 class Job(models.Model):
     JOB_STATUS_CHOICES = [
-        ('open', 'Open'),
-        ('closed', 'Closed'),
+        ('pending', 'Pending'),
+        ('approved', 'Approved'),
+        ('rejected', 'Rejected'),
     ]
 
     title = models.CharField(max_length=255)
@@ -15,12 +16,13 @@ class Job(models.Model):
     city = models.CharField(max_length=100)
     job_type = models.CharField(max_length=100)  # Full-time, Part-time, Remote
     salary = models.PositiveIntegerField()
-    status = models.CharField(max_length=10, choices=JOB_STATUS_CHOICES, default='open')
+    status = models.CharField(max_length=10, choices=JOB_STATUS_CHOICES, default='pending')  # Default 'pending'
     posted_by = models.ForeignKey(User, on_delete=models.CASCADE)
     created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
         return self.title
+
 
 
 def job_completion_upload_path(instance, filename):

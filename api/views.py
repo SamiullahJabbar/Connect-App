@@ -49,24 +49,43 @@ class UserDetailView(APIView):
         return Response(serializer.data, status=status.HTTP_200_OK)
     
 
+from .serializers import UserProfileSerializer, UserDetailSerializer 
 
+from rest_framework.parsers import MultiPartParser, FormParser  
 
 class UserProfileView(APIView):
     permission_classes = [IsAuthenticated]
+    parser_classes = [MultiPartParser, FormParser]  
 
     def get(self, request):
-        user = request.user
-        serializer = UserDetailSerializer(user)
+        user_profile, _ = UserProfile.objects.get_or_create(user=request.user)
+        serializer = UserDetailSerializer(request.user)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
     def put(self, request):
-        user = request.user
-        serializer = UserDetailSerializer(user, data=request.data, partial=True)
-        if serializer.is_valid():
-            serializer.save()
-            return Response(serializer.data, status=status.HTTP_200_OK)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-    
+        user_profile, _ = UserProfile.objects.get_or_create(user=request.user)
+
+        profile_serializer = UserProfileSerializer(
+            user_profile,
+            data=request.data,
+            partial=True
+        ) 
+
+        user_serializer = UserDetailSerializer(
+            request.user,
+            data=request.data,
+            partial=True
+        )
+
+        if profile_serializer.is_valid() and user_serializer.is_valid():
+            profile_serializer.save()
+            user_serializer.save()
+            return Response(user_serializer.data, status=status.HTTP_200_OK)
+
+        return Response({
+            "profile_errors": profile_serializer.errors,
+            "user_errors": user_serializer.errors
+        }, status=status.HTTP_400_BAD_REQUEST)
 
 
 
