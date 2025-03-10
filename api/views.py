@@ -8,7 +8,7 @@ from .serializers import RegisterSerializer
 from rest_framework.views import APIView
 from rest_framework.permissions import IsAuthenticated
 from rest_framework_simplejwt.tokens import RefreshToken
-from .serializers import UserDetailSerializer,ChatMessageSerializer
+from .serializers import UserDetailSerializer,ChatMessageSerializer,CustomTokenObtainPairSerializer
 from .models import UserProfile,ChatMessage
 
 
@@ -24,6 +24,7 @@ class RegisterView(CreateAPIView):
 
 class LoginView(TokenObtainPairView):
     permission_classes = [AllowAny]
+    serializer_class = CustomTokenObtainPairSerializer
 
 
 class LogoutView(APIView):
@@ -51,11 +52,11 @@ class UserDetailView(APIView):
 
 from .serializers import UserProfileSerializer, UserDetailSerializer 
 
-from rest_framework.parsers import MultiPartParser, FormParser  
+from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
 
 class UserProfileView(APIView):
     permission_classes = [IsAuthenticated]
-    parser_classes = [MultiPartParser, FormParser]  
+    parser_classes = [MultiPartParser, FormParser, JSONParser] 
 
     def get(self, request):
         user_profile, _ = UserProfile.objects.get_or_create(user=request.user)
@@ -65,11 +66,16 @@ class UserProfileView(APIView):
     def put(self, request):
         user_profile, _ = UserProfile.objects.get_or_create(user=request.user)
 
+        profile_data = request.data.copy()  
+        
+        if request.content_type == "application/json":
+            profile_data.pop("profile_image", None) 
+
         profile_serializer = UserProfileSerializer(
             user_profile,
-            data=request.data,
+            data=profile_data,
             partial=True
-        ) 
+        )
 
         user_serializer = UserDetailSerializer(
             request.user,

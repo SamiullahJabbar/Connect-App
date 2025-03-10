@@ -3,6 +3,8 @@ from rest_framework import serializers
 from django.contrib.auth import get_user_model
 from .utils import send_verification_email
 from .models import UserProfile, ChatMessage
+from rest_framework_simplejwt.views import TokenObtainPairView
+from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 
 User = get_user_model()
 
@@ -37,11 +39,11 @@ class UserProfileSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = UserProfile
-        fields = ['profile_image', 'skills', 'experience', 'city', 'education', 'about_me']
-        
+        fields = ['profile_image', 'skills', 'experience', 'city', 'address', 'education', 'about_me']  # ✅ Added address field
+
 class UserDetailSerializer(serializers.ModelSerializer):
     profile = UserProfileSerializer()
-    is_superuser = serializers.BooleanField(read_only=True)  # ✅ Remove `source='is_superuser'`
+    is_superuser = serializers.BooleanField(read_only=True)
 
     class Meta:
         model = User
@@ -53,7 +55,6 @@ class UserDetailSerializer(serializers.ModelSerializer):
             UserProfile.objects.update_or_create(user=instance, defaults=profile_data)
         return super().update(instance, validated_data)
 
-
 class ChatMessageSerializer(serializers.ModelSerializer):
     sender = serializers.ReadOnlyField(source="sender.username")
     receiver = serializers.ReadOnlyField(source="receiver.username")
@@ -61,3 +62,10 @@ class ChatMessageSerializer(serializers.ModelSerializer):
     class Meta:
         model = ChatMessage
         fields = ["id", "sender", "receiver", "message", "timestamp"]
+
+
+class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
+    def validate(self, attrs):
+        data = super().validate(attrs)
+        data["is_superuser"] = self.user.is_superuser  # Include superuser status
+        return data
