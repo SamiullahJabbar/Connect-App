@@ -11,6 +11,7 @@ until nc -z "$DATABASE_HOST" 5432; do
   sleep 1
 done
 
+python3 manage.py makemigrations
 python3 manage.py migrate
 python3 manage.py collectstatic --noinput
 >&2 echo "Postgres is up - executing command"
