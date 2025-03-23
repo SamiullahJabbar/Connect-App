@@ -7,6 +7,9 @@ from .models import Job,JobApplication,Notification
 from .utils import send_job_application_notification,send_application_notification,send_application_status_email,send_job_completion_email 
 from rest_framework.parsers import MultiPartParser, FormParser
 from django.db.models import Q
+from django.contrib.auth import get_user_model
+User = get_user_model()
+from api.models import UserProfile
 
 # user Job Management (Create, Update, Delete)
 class JobView(APIView):
@@ -23,10 +26,12 @@ class JobView(APIView):
     def put(self, request, job_id):
         """Allow users to update only their own jobs, admins can update any job"""
         try:
+            print("job_id",job_id)
             job = Job.objects.get(id=job_id)
-            if request.user != job.posted_by and not request.user.is_staff:
+            if request.user != job.posted_by and not request.user.is_staff and not request.user.is_superuser:
                 return Response({"error": "Permission denied"}, status=status.HTTP_403_FORBIDDEN)
-        except Job.DoesNotExist:
+        except Job.DoesNotExist as e:
+            print("error",e)
             return Response({"error": "Job not found"}, status=status.HTTP_404_NOT_FOUND)
 
         serializer = JobSerializer(job, data=request.data, partial=True)
@@ -39,14 +44,21 @@ class JobView(APIView):
         """Allow users to delete only their own jobs, admins can delete any job"""
         try:
             job = Job.objects.get(id=job_id)
-            if request.user != job.posted_by and not request.user.is_staff:
+            if request.user != job.posted_by and not request.user.is_staff and not request.user.is_superuser:
                 return Response({"error": "Permission denied"}, status=status.HTTP_403_FORBIDDEN)
             job.delete()
             return Response({"message": "Job deleted successfully"}, status=status.HTTP_204_NO_CONTENT)
         except Job.DoesNotExist:
             return Response({"error": "Job not found"}, status=status.HTTP_404_NOT_FOUND)
 
-
+    def get(self, request):
+        """Retrieve all jobs posted by the logged-in user"""
+        jobs = Job.objects.filter(posted_by=request.user)
+        serializer = JobSerializer(jobs, many=True)
+        for job in serializer.data:
+            userProfile, _ = UserProfile.objects.get_or_create(user=job['posted_by'])
+            job['company_logo'] = userProfile.profile_image.url if userProfile.profile_image else None
+        return Response(serializer.data, status=status.HTTP_200_OK)
 
 class AdminJobApprovalView(APIView):
     permission_classes = [IsAuthenticated, IsAdminUser] 
@@ -103,10 +115,40 @@ class ApprovedJobSearchView(APIView):
             
 
         serializer = JobSerializer(jobs, many=True)
+        # add company_logo field to the serializer
+        for job in serializer.data:
+            userProfile, _ = UserProfile.objects.get_or_create(user=job['posted_by'])
+            job['company_logo'] = userProfile.profile_image.url if userProfile.profile_image else None
+
         return Response(serializer.data, status=status.HTTP_200_OK)
 
 
 
+class JobAppliedView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        """Retrieve all jobs applied by the logged-in user"""
+        applications = JobApplication.objects.filter(user=request.user)
+        serializer = JobApplicationSerializer(applications, many=True)
+        for application in serializer.data:
+            creator_of_job = Job.objects.get(id=application['job'])
+            profile_data, _ = UserProfile.objects.get_or_create(user=creator_of_job.posted_by)
+            application['company_image'] = profile_data.profile_image.url if profile_data.profile_image else None
+            
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+class JobToApproveView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        """Retrieve all jobs that are pending approval"""
+        if request.user.is_superuser:
+            jobs = Job.objects.filter(status="pending")
+            serializer = JobSerializer(jobs, many=True)
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        else:
+            return Response({"error": "You are not authorized to access this resource"}, status=status.HTTP_403_FORBIDDEN)
 
 
 class JobApplicationView(APIView):
@@ -115,26 +157,31 @@ class JobApplicationView(APIView):
     def post(self, request, job_id):
         user = request.user
         try:
-            job = Job.objects.get(id=job_id, status="approved")  
+            job = Job.objects.get(id=job_id, status="approved")
         except Job.DoesNotExist:
             return Response({"error": "Job not found or closed"}, status=status.HTTP_404_NOT_FOUND)
 
         if JobApplication.objects.filter(user=user, job=job).exists():
-            return Response({"error": "You have already applied for this job"}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({"error": "You have already applied for this job"}, status=status.HTTP_202_ACCEPTED)
         application = JobApplication.objects.create(user=user, job=job, status="pending")
         send_application_notification(job.posted_by.email, user.username, job.title)
         Notification.objects.create(
-            user=job.posted_by,  
+            user=job.posted_by,
             message=f"{user.username} has applied for your job: {job.title}."
         )
 
         serializer = JobApplicationSerializer(application)
         return Response(serializer.data, status=status.HTTP_201_CREATED)
 
-    def get(self, request):
+    def get(self, request, job_id):
         """Fetch all applications of the logged-in user"""
-        applications = JobApplication.objects.filter(user=request.user)
+        applications = JobApplication.objects.filter(user=request.user, job=job_id)
         serializer = JobApplicationSerializer(applications, many=True)
+        for application in serializer.data:
+            userProfile, _ = UserProfile.objects.get_or_create(user=application['user'])
+            application['user'] = {}
+            application['user']['username'] = userProfile.user.username
+            application['user']['profile_image'] = userProfile.profile_image.url if userProfile.profile_image else None
         return Response(serializer.data, status=status.HTTP_200_OK)
 
 class JobApplicationApprovalView(APIView):
@@ -143,7 +190,8 @@ class JobApplicationApprovalView(APIView):
     def get(self, request):
         """Retrieve all applications for jobs posted by the logged-in job owner"""
         user = request.user
-        jobs_posted_by_user = Job.objects.filter(posted_by=user)  
+        jobs_posted_by_user = Job.objects.filter(posted_by=user)
+        print("jobs_posted_by_user",jobs_posted_by_user)
         applications = JobApplication.objects.filter(job__in=jobs_posted_by_user)  
 
         serializer = JobApplicationSerializer(applications, many=True)

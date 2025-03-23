@@ -27,14 +27,17 @@ def send_job_application_notification(user_email, job_title, status):
         message = f"Sorry! Your job post '{job_title}' has been rejected by the admin."
     else:
         message = f"Your job post '{job_title}' status has been updated to '{status}'."
-
-    send_mail(
-        subject,
-        message,
-        settings.DEFAULT_FROM_EMAIL,  # Now using DEFAULT_FROM_EMAIL
-        [user_email],
-        fail_silently=False,
-    )
+    try:
+        send_mail(
+            subject,
+            message,
+            settings.DEFAULT_FROM_EMAIL,  # Now using DEFAULT_FROM_EMAIL
+            [user_email],
+            fail_silently=False,
+        )
+    except Exception as e:
+        print("Error sending email:", e)
+        return False
 
 
 def send_application_notification(job_owner_email, applicant_name, job_title):
@@ -42,13 +45,17 @@ def send_application_notification(job_owner_email, applicant_name, job_title):
     subject = "New Job Application Received"
     message = f"Hi,\n\n{applicant_name} has applied for your job post: '{job_title}'. Please review and approve/reject the application."
     
-    send_mail(
+    try:
+        send_mail(
         subject,
         message,
-        "your-email@gmail.com",  # Change to your email
-        [job_owner_email],
-        fail_silently=False,
-    )
+            "your-email@gmail.com",  # Change to your email
+            [job_owner_email],
+            fail_silently=False,
+        )
+    except Exception as e:
+        print("Error sending email:", e)
+        return False
 
 
 def send_application_status_email(user_email, job_title, status):
@@ -60,13 +67,17 @@ def send_application_status_email(user_email, job_title, status):
     else:
         message = f"Unfortunately, your job application for '{job_title}' has been rejected."
 
-    send_mail(
-        subject,
-        message,
-        "your-email@gmail.com",  # Change to your DEFAULT_FROM_EMAIL
-        [user_email],
-        fail_silently=False,
-    )
+    try:
+        send_mail(
+            subject,
+            message,
+            "your-email@gmail.com",  # Change to your DEFAULT_FROM_EMAIL
+            [user_email],
+            fail_silently=False,
+        )
+    except Exception as e:
+        print("Error sending email:", e)
+        return False
 
 
 
@@ -82,4 +93,8 @@ def send_job_completion_email(job_owner_email, job_owner_name, applicant_name, j
     Best regards,
     Job Platform Team
     """
-    send_mail(subject, message, settings.DEFAULT_FROM_EMAIL, [job_owner_email], fail_silently=False)
+    try:
+        send_mail(subject, message, settings.DEFAULT_FROM_EMAIL, [job_owner_email], fail_silently=False)
+    except Exception as e:
+        print("Error sending email:", e)
+        return False

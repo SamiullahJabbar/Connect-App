@@ -1,5 +1,5 @@
 from django.urls import path
-from .views import JobView, ApprovedJobSearchView,JobApplicationView,JobApplicationApprovalView,NotificationView,JobCompletionView,JobPosterCompletionView,AdminJobApprovalView,AllAdminJobListView
+from .views import JobView, ApprovedJobSearchView,JobApplicationView,JobApplicationApprovalView,NotificationView,JobCompletionView,JobPosterCompletionView,AdminJobApprovalView,AllAdminJobListView,JobAppliedView, JobToApproveView
 
 urlpatterns = [
     path('search-job/', ApprovedJobSearchView.as_view(), name='job-list'),  
@@ -17,4 +17,9 @@ urlpatterns = [
     path('jobs/completed/', JobCompletionView.as_view(), name='job-completed-list'),
     path('owner/jobs/<int:application_id>/confirm/', JobPosterCompletionView.as_view(), name='admin-job-confirmation'),
     path('Adminalljob/', AllAdminJobListView.as_view(), name='job-completed-list'),
+
+    path("jobs/", JobView.as_view(), name="jobs"),
+    path("jobs/<int:job_id>/", JobView.as_view(), name="job-detail"),
+    path("jobs/applied/", JobAppliedView.as_view(), name="applied-jobs"),
+    path("jobs/to-approve/", JobToApproveView.as_view(), name="to-approve-jobs"),
 ]
