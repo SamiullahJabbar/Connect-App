@@ -13,10 +13,10 @@ class RegisterSerializer(serializers.ModelSerializer):
     password = serializers.CharField(write_only=True, min_length=8, error_messages={
         "min_length": "Password must be at least 8 characters long."
     })
-
+    user_type = serializers.ChoiceField(choices=[('buyer', 'Buyer'), ('seller', 'Seller')], default='buyer')
     class Meta:
         model = User
-        fields = ['email', 'username', 'phone_number', 'password']
+        fields = ['email', 'username', 'phone_number', 'password', 'user_type']
 
     def validate_phone_number(self, value):
         """Ensure phone number includes country code"""
@@ -30,7 +30,8 @@ class RegisterSerializer(serializers.ModelSerializer):
             email=validated_data['email'],
             username=validated_data['username'],
             phone_number=validated_data['phone_number'],
-            password=validated_data['password']
+            password=validated_data['password'],
+            user_type=validated_data['user_type']
         )
         send_verification_email(user)
         return user
@@ -67,5 +68,9 @@ class ChatMessageSerializer(serializers.ModelSerializer):
 class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
     def validate(self, attrs):
         data = super().validate(attrs)
+        if not self.user.is_verified:
+            print("User is not verified")
+            raise serializers.ValidationError({"email": "Please verify your email before logging in."})
         data["is_superuser"] = self.user.is_superuser  # Include superuser status
+        data["user_type"] = self.user.user_type
         return data

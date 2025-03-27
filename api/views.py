@@ -4,17 +4,18 @@ from rest_framework.permissions import AllowAny
 from django.contrib.auth import get_user_model
 from rest_framework.response import Response
 from rest_framework import status
+from rest_framework.decorators import api_view
 from .serializers import RegisterSerializer
 from rest_framework.views import APIView
 from rest_framework.permissions import IsAuthenticated
 from rest_framework_simplejwt.tokens import RefreshToken
 from .serializers import UserDetailSerializer,ChatMessageSerializer,CustomTokenObtainPairSerializer
 from .models import UserProfile,ChatMessage
-
-
+from django.db import models
 
 
 User = get_user_model()
+User.add_to_class('user_type', models.CharField(max_length=10, choices=[('buyer', 'Buyer'), ('seller', 'Seller')], null=True, blank=True, default='buyer'))
 
 class RegisterView(CreateAPIView):
     queryset = User.objects.all()
@@ -26,6 +27,14 @@ class LoginView(TokenObtainPairView):
     permission_classes = [AllowAny]
     serializer_class = CustomTokenObtainPairSerializer
 
+
+@api_view(['POST'])
+def change_the_user_status(request):
+    status = request.data.get('status')
+    user = request.user
+    user.user_type = status
+    user.save()
+    return Response({"message": "User type changed to " + status}, status=status.HTTP_200_OK)
 
 class LogoutView(APIView):
     permission_classes = [IsAuthenticated]

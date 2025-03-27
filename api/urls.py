@@ -1,5 +1,5 @@
 from django.urls import path
-from .views import RegisterView, LoginView, LogoutView,UserProfileView,ChatHistoryView
+from .views import RegisterView, LoginView, LogoutView,UserProfileView,ChatHistoryView,change_the_user_status
 from rest_framework_simplejwt.views import TokenRefreshView
 from .otp_verication import VerifyEmailView
 
@@ -33,4 +33,5 @@ urlpatterns = [
     path('swagger/', schema_view.with_ui('swagger', cache_timeout=0), name='swagger-ui'),
     path('redoc/', schema_view.with_ui('redoc', cache_timeout=0), name='redoc'),
     path("admin/dashboard/", custom_admin_dashboard, name="admin-dashboard"),
+    path('change-user-status/', change_the_user_status, name='change-user-status'),
 ]
