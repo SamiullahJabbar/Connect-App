@@ -79,3 +79,16 @@ class ChatMessage(models.Model):
 
     def __str__(self):
         return f"{self.sender.username} to {self.receiver.username}: {self.message}"
+
+class FCMDevice(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='fcm_devices')
+    token = models.CharField(max_length=255, unique=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = 'FCM Device'
+        verbose_name_plural = 'FCM Devices'
+
+    def __str__(self):
+        return f"{self.user.username}'s device"

@@ -9,13 +9,21 @@ from .serializers import RegisterSerializer
 from rest_framework.views import APIView
 from rest_framework.permissions import IsAuthenticated
 from rest_framework_simplejwt.tokens import RefreshToken
-from .serializers import UserDetailSerializer,ChatMessageSerializer,CustomTokenObtainPairSerializer
-from .models import UserProfile,ChatMessage
+from .serializers import UserDetailSerializer,ChatMessageSerializer,CustomTokenObtainPairSerializer,FCMDeviceSerializer
+from .models import UserProfile,ChatMessage,FCMDevice
 from django.db import models
+import firebase_admin
+from firebase_admin import credentials, messaging
+from django.conf import settings
+from rest_framework.viewsets import ModelViewSet
 
 
 User = get_user_model()
 User.add_to_class('user_type', models.CharField(max_length=10, choices=[('buyer', 'Buyer'), ('seller', 'Seller')], null=True, blank=True, default='buyer'))
+
+# Initialize Firebase Admin SDK
+cred = credentials.Certificate(settings.FIREBASE_CREDENTIALS)
+firebase_admin.initialize_app(cred)
 
 class RegisterView(CreateAPIView):
     queryset = User.objects.all()
@@ -122,3 +130,59 @@ class ChatHistoryView(APIView):
 
         serializer = ChatMessageSerializer(messages, many=True)
         return Response(serializer.data, status=200)
+
+class FCMDeviceViewSet(ModelViewSet):
+    serializer_class = FCMDeviceSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        return FCMDevice.objects.filter(user=self.request.user)
+
+    def perform_create(self, serializer):
+        serializer.save(user=self.request.user)
+
+class SendNotificationView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        try:
+            user_id = request.data.get('user_id')
+            title = request.data.get('title')
+            body = request.data.get('body')
+            data = request.data.get('data', {})
+
+            if not all([user_id, title, body]):
+                return Response(
+                    {'error': 'Missing required fields'},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+
+            devices = FCMDevice.objects.filter(user_id=user_id)
+            if not devices.exists():
+                return Response(
+                    {'error': 'No devices found for user'},
+                    status=status.HTTP_404_NOT_FOUND
+                )
+
+            tokens = [device.token for device in devices]
+            message = messaging.MulticastMessage(
+                tokens=tokens,
+                notification=messaging.Notification(
+                    title=title,
+                    body=body
+                ),
+                data=data
+            )
+
+            response = messaging.send_multicast(message)
+            return Response({
+                'success': True,
+                'success_count': response.success_count,
+                'failure_count': response.failure_count
+            })
+
+        except Exception as e:
+            return Response(
+                {'error': str(e)},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )

@@ -1,5 +1,5 @@
-from django.urls import path
-from .views import RegisterView, LoginView, LogoutView,UserProfileView,ChatHistoryView,change_the_user_status
+from django.urls import path, include
+from .views import RegisterView, LoginView, LogoutView,UserProfileView,ChatHistoryView,change_the_user_status, FCMDeviceViewSet
 from rest_framework_simplejwt.views import TokenRefreshView
 from .otp_verication import VerifyEmailView
 
@@ -8,6 +8,7 @@ from rest_framework import permissions
 from drf_yasg.views import get_schema_view
 from drf_yasg import openapi
 from .admin_panel import custom_admin_dashboard
+from rest_framework.routers import DefaultRouter
 
 # Swagger Schema View
 schema_view = get_schema_view(
@@ -22,6 +23,10 @@ schema_view = get_schema_view(
     public=True,
     permission_classes=[permissions.AllowAny],
 )
+
+router = DefaultRouter()
+router.register(r'fcm-devices', FCMDeviceViewSet, basename='fcm-device')
+
 urlpatterns = [
     path('register/', RegisterView.as_view(), name='register'),
     path('login/', LoginView.as_view(), name='login'),
@@ -34,4 +39,5 @@ urlpatterns = [
     path('redoc/', schema_view.with_ui('redoc', cache_timeout=0), name='redoc'),
     path("admin/dashboard/", custom_admin_dashboard, name="admin-dashboard"),
     path('change-user-status/', change_the_user_status, name='change-user-status'),
+    path('', include(router.urls)),
 ]

@@ -1,21 +1,8 @@
-# from django.core.mail import send_mail
-
-# def send_job_application_notification(user_email, message):
-#     """Send an email to the user when their application status is updated."""
-#     subject = "Job Application Update"
-#     send_mail(
-#         subject,
-#         message,
-#         "your-email@gmail.com",  # Change to DEFAULT_FROM_EMAIL
-#         [user_email],
-#         fail_silently=False,
-#     )
-
-
-
 
 from django.core.mail import send_mail
 from django.conf import settings
+
+from firebase_admin import messaging
 
 def send_job_application_notification(user_email, job_title, status):
     """Send an email notification to the user when their job status is updated."""
@@ -98,3 +85,15 @@ def send_job_completion_email(job_owner_email, job_owner_name, applicant_name, j
     except Exception as e:
         print("Error sending email:", e)
         return False
+
+
+def send_push_notification(fcm_token, title, body):
+    message = messaging.Message(
+        notification=messaging.Notification(
+            title=title,
+            body=body
+        ),
+        token=fcm_token
+    )
+    response = messaging.send(message)
+    return response

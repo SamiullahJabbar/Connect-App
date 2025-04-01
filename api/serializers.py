@@ -2,7 +2,7 @@ import re
 from rest_framework import serializers
 from django.contrib.auth import get_user_model
 from .utils import send_verification_email
-from .models import UserProfile, ChatMessage
+from .models import UserProfile, ChatMessage, FCMDevice
 from rest_framework_simplejwt.views import TokenObtainPairView
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 
@@ -74,3 +74,9 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
         data["is_superuser"] = self.user.is_superuser  # Include superuser status
         data["user_type"] = self.user.user_type
         return data
+
+class FCMDeviceSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = FCMDevice
+        fields = ['id', 'token', 'created_at', 'updated_at']
+        read_only_fields = ['created_at', 'updated_at']

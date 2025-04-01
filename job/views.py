@@ -10,6 +10,9 @@ from django.db.models import Q
 from django.contrib.auth import get_user_model
 User = get_user_model()
 from api.models import UserProfile
+from .utils import send_push_notification
+from api.models import FCMDevice
+
 
 # user Job Management (Create, Update, Delete)
 class JobView(APIView):
@@ -94,6 +97,17 @@ class AdminJobApprovalView(APIView):
         # Send Email Notification
         send_job_application_notification(job.posted_by.email, job.title, new_status)
 
+        # send push notification
+        try:
+            try:
+                # send notifications to all the devices of the job poster
+                fcm_tokens = FCMDevice.objects.filter(user=job.posted_by)
+                for fcm_token in fcm_tokens:
+                    send_push_notification(fcm_token.token, "New Job Status", f"Your job '{job.title}' has been {new_status}.")
+            except Exception as e:
+                print("exception",e)
+        except Exception as e:
+            print("error",e)
         return Response({"message": f"Job status updated to {new_status}"}, status=status.HTTP_200_OK)
 
 
@@ -169,6 +183,16 @@ class JobApplicationView(APIView):
             user=job.posted_by,
             message=f"{user.username} has applied for your job: {job.title}."
         )
+        # send push notification
+        try:
+            try:
+                fcm_tokens = FCMDevice.objects.filter(user=job.posted_by)
+                for fcm_token in fcm_tokens:
+                    send_push_notification(fcm_token.token, "New Job Application", f"{user.username} has applied for your job: {job.title}.")
+            except Exception as e:
+                print("exception",e)
+        except Exception as e:
+            print("error",e)
 
         serializer = JobApplicationSerializer(application)
         return Response(serializer.data, status=status.HTTP_201_CREATED)
@@ -221,6 +245,17 @@ class JobApplicationApprovalView(APIView):
             message = f"Your job application for '{application.job.title}' has been rejected."
 
         Notification.objects.create(user=application.user, message=message)
+
+        # send push notification
+        try:
+            try:
+                fcm_tokens = FCMDevice.objects.filter(user=application.user)
+                for fcm_token in fcm_tokens:
+                    send_push_notification(fcm_token.token, "New Job Application", f"{application.user.username} has applied for your job: {application.job.title}.")
+            except Exception as e:
+                print("exception",e)
+        except Exception as e:
+            print("error",e)
 
         return Response({"message": f"Application status updated to {new_status}"}, status=status.HTTP_200_OK)
 
@@ -332,6 +367,17 @@ class JobCompletionView(APIView):
                 user=application.job.posted_by,
                 message=f"{request.user.username} has marked the job '{application.job.title}' as completed. Please confirm."
             )
+            
+            # send push notification
+            try:
+                try:
+                    fcm_tokens = FCMDevice.objects.filter(user=application.job.posted_by)
+                    for fcm_token in fcm_tokens:
+                        send_push_notification(fcm_token.token, "New Job Completion", f"{request.user.username} has marked the job '{application.job.title}' as completed. Please confirm.")
+                except Exception as e:
+                    print("exception",e)
+            except Exception as e:
+                print("error",e)
 
             return Response({"message": "Job marked as completed with proof, waiting for confirmation"}, status=status.HTTP_200_OK)
 
@@ -363,6 +409,17 @@ class JobPosterCompletionView(APIView):
             message = f"Your job '{application.job.title}' completion was rejected by the job owner."
         Notification.objects.create(user=application.user, message=message)
         send_job_application_notification(application.user.email, message, new_status)
+
+        # send push notification
+        try:
+            try:
+                fcm_tokens = FCMDevice.objects.filter(user=application.user)
+                for fcm_token in fcm_tokens:
+                    send_push_notification(fcm_token.token, "New Job Completion", f"{application.user.username} has marked the job '{application.job.title}' as completed. Please confirm.")
+            except Exception as e:
+                print("exception",e)
+        except Exception as e:
+            print("error",e)
 
         return Response({"message": f"Job completion status updated to {new_status}"}, status=status.HTTP_200_OK)
 
